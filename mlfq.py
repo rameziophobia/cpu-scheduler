@@ -44,12 +44,8 @@ class Mlfq:
             highest_queue = self.get_highest_non_empty_queue()
             if highest_queue is not None:
                 process_id = highest_queue.run_process(self.current_time)
-                draw_process_rect(highest_queue.queue_id, highest_queue.ticks - 1, process_id)
-            else:
-                for queue in self.queues:
-                    queue.ticks += 1
-            for queue in self.queues:
-                queue.ticks += 1
+                draw_process_rect(highest_queue.queue_id, self.current_time, process_id)
+
             self.current_time += 1
 
     def is_boost_available(self):
@@ -131,11 +127,7 @@ COLORS = ["purple", "lightblue", "red", "green", "blue", "brown", "red", "black"
 
 
 def draw_process_rect(queue_num, queue_ticks, process_id):
-    color = COLORS[process_id]
-    # color = (sg.YELLOWS[process_id], sg.BLUES[process_id])
-    # color = sg.BLUES[process_id]
-    # color = str('#' + str(int(random.random() * process_id * 1000000)))
-    # print(float(hash(process_id) % 256) / 256)
+    color = COLORS[process_id % len(COLORS)]
     y1_d = y1 + 25 * queue_num
     x1_d = x1 + queue_ticks * x2_off
     graph.draw_rectangle((x1_d, y1_d), (x1_d + x2_off, y1_d + y2_off), fill_color=color)

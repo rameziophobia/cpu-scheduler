@@ -8,7 +8,6 @@ class Queue:
     def __init__(self, priority):
         self.__deque = deque()
         self.priority = priority
-        self.ticks = 0
         self.queue_id = Queue.queue_id_counter
         Queue.queue_id_counter += 1
 
@@ -29,7 +28,6 @@ class Queue:
         return self.__deque[0]
 
     def run_process(self, current_time):
-        # self.ticks += 1
         process = self.get_highest_priority_job()
         process_id = process.run(current_time)
 
