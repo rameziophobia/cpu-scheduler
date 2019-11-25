@@ -1,122 +1,110 @@
 import argparse
-
-ap = argparse.ArgumentParser()
-ap.add_argument("-n", "--numberOfQueues", default=3,
-                help="number of queues", type=int)
-
-ap.add_argument("-q", "--quantumList", default="5,10",
-                help="q1,q2,q3, ...", type=str)
-
-ap.add_argument("-l", "--jobList", default="10:0:10,10:1:10",
-                help="burst1:arrivalTime1:IOFreq1,burst2:arrivalTime2:IOFreq2, ...")
-
-ap.add_argument("-b", "--boost", default=0,
-                help="", type=int)
-
-args = vars(ap.parse_args())
-
-boost = args["boost"]
-number_of_queues = args["numberOfQueues"]
-jobs = str(args["jobList"]).split(",")
-quantum_list = str(args["quantumList"]).split(",")
-quantum_list = [int(quantum) for quantum in quantum_list]
-
-
-def find_highest_priority_job(queues):
-    for i in range(len(queues)):
-        if len(queues[i].queue) == 0:
-            continue
-        return queues[i].queue[0]
+from scheduling_queue import RRQueue
+from scheduling_queue import FCFSQueue
+from process import Process
 
 
 class Mlfq:
-    def __init__(self, number_of_queues, quantum_list):
+    def __init__(self, number_of_queues, quantum_list, job_list, boost):
+        self.current_time = 0
+        self.queues = list()
         self.init_queues(number_of_queues, quantum_list)
+        self.job_list = job_list
+        self.boost = boost
 
     def init_queues(self, number_of_queues, quantum_list):
-        pass
+        for i in range(number_of_queues - 1):
+            self.queues.append(RRQueue(i, quantum_list[i]))
+
+        self.queues.append(FCFSQueue(number_of_queues - 1))
+
+        for i in range(number_of_queues - 1):
+            self.queues[i].set_next_queue(self.queues[i + 1])
+
+    def add_arrival_to_first_queue(self, process, priority):
+        if process.arrival == self.current_time:
+            self.queues[priority].add_process(process)
+
+    def loop(self):
+        while True:
+            pending_jobs = [job for job in self.job_list if not job.is_finished()]
+            if len(pending_jobs) == 0:
+                break
+
+            for process in pending_jobs:
+                self.add_arrival_to_first_queue(process, priority=0)
+
+            if self.is_boost_available():
+                self.boost_jobs()
+
+            highest_queue = self.get_highest_non_empty_queue()
+            if highest_queue is not None:
+                highest_queue.run_process(self.current_time)
+
+            self.current_time += 1
+
+    def is_boost_available(self):
+        if self.boost <= 0 or self.current_time == 0:
+            return False
+        return True
+
+    def boost_jobs(self):
+        if self.current_time % self.boost == 0:
+            for queue in self.queues:
+                queue.empty()
+            for job in self.job_list:
+                if not job.is_finished():
+                    self.queues[0].add_process(job)
+
+    def get_highest_non_empty_queue(self):
+        for queue in self.queues:
+            if queue.is_empty():
+                continue
+            return queue
+
+    def print_statistics(self):
+        for job in self.job_list:
+            print(f"job arrival {job.arrival}, turn: {job.statistics.turnaround}, wait: {job.statistics.wait}, "
+                  f"response {job.statistics.response_time}")
+
+        print(f"throughput: {len(self.job_list) / self.current_time * 1000}")
 
 
-job_list = list()
-finished_jobs = list()
+def parse_jobs(jobs):
+    returned_jobs = list()
+    for job in jobs:
+        burst, arrival = job.split(":")
 
-queues = list()
-for i in range(number_of_queues - 1):
-    queues.append(Queue(i, quantum_list[i]))
-queues.append(Queue(number_of_queues, -1))
-
-
-def add_to_queue(current_time, priority):
-    if process.arrival == current_time:
-        queues[priority].queue.append(process)
-    else:
-        print(f"arrival is {process.arrival}, current time is {current_time}")
+        returned_jobs.append(Process(int(burst), int(arrival)))
+    return returned_jobs
 
 
-for job in jobs:
-    burst, arrival, io_freq = job.split(":")
+if __name__ == '__main__':
 
-    process = Process(int(burst), int(arrival), int(io_freq))
-    job_list.append(process)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-n", "--numberOfQueues", default=3,
+                    help="number of queues", type=int)
 
-    current_time = 0
-    priority = 0
-    add_to_queue(priority, current_time)
+    ap.add_argument("-q", "--quantumList", default="5,10",
+                    help="q1,q2,q3, ...", type=str)
 
-print(f"dsdsdsdsds {str(len(queues[0].queue))}")
+    ap.add_argument("-l", "--jobList", default="15:1,20:0",
+                    help="burst1:arrivalTime1,burst2:arrivalTime2, ...")
 
-print(queues[0].queue[0])
-total_jobs = len(job_list)
+    ap.add_argument("-b", "--boost", default=0,
+                    help="", type=int)
 
-# job_list.sort()
+    args = vars(ap.parse_args())
 
-current_time = 0
+    boost = args["boost"]
+    number_of_queues = args["numberOfQueues"]
+    jobs = str(args["jobList"]).split(",")
+    quantum_list = str(args["quantumList"]).split(",")
+    quantum_list = [int(quantum) for quantum in quantum_list]
 
-
-def boost_available():
-    if boost <= 0 or current_time == 0:
-        return False
-    return True
-
-
-def boost_jobs():
-    if current_time % boost == 0:
-        for queue in queues:
-            queue.queue.clear()
-        for job in job_list:
-            if not job.is_finished():
-                queues[0].queue.append(job)
+    processes = parse_jobs(jobs)
+    mlfq = Mlfq(number_of_queues, quantum_list, processes, boost)
+    mlfq.loop()
+    mlfq.print_statistics()
 
 
-print(len(finished_jobs))
-print(total_jobs)
-while len(finished_jobs) < total_jobs:
-    for process in job_list:
-        if process.is_finished():
-            add_to_queue(current_time, priority=0)
-
-    if boost_available():
-        boost_jobs()
-
-    # todo io done?
-    job = find_highest_priority_job(queues)
-    job.decrement_wait_time()
-    # todo run it
-    # todo response time
-    # todo FCFS queue
-    if job.priority == number_of_queues - 1:
-        job.finish(current_time)
-    else:
-        # normal queue
-        job.run(current_time)
-
-        # todo increment wait_time
-        for job in job_list:
-            if not job.is_finished():
-                job.increment_wait_time()
-    current_time += 1
-
-
-for job in job_list:
-    print(f"job turn: {job.statistics.turnaround}")
-    print(f"job wait: {job.statistics.wait}")
