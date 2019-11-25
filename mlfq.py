@@ -5,6 +5,7 @@ from process import Process
 import PySimpleGUI as sg
 import random
 
+
 class Mlfq:
     def __init__(self, number_of_queues, quantum_list, job_list, boost):
         self.current_time = 0
@@ -16,8 +17,10 @@ class Mlfq:
     def init_queues(self, number_of_queues, quantum_list):
         for i in range(number_of_queues - 1):
             self.queues.append(RRQueue(i, quantum_list[i]))
+            draw_rr_queue_header(i, quantum_list[i])
 
         self.queues.append(FCFSQueue(number_of_queues - 1))
+        draw_fcfs_queue_header(number_of_queues - 1)
 
         for i in range(number_of_queues - 1):
             self.queues[i].set_next_queue(self.queues[i + 1])
@@ -70,21 +73,24 @@ class Mlfq:
 
     def print_statistics(self):
         avg_turnaround_time = avg_wait = avg_response = 0
-        for job in self.job_list:
-            print(f"job arrival {job.arrival}, "
-                  f"turnaround_time: {job.statistics.turnaround}, "
-                  f"wait: {job.statistics.wait}, "
-                  f"response {job.statistics.response_time}")
+        for i, job in enumerate(self.job_list):
+            graph.draw_text(f"job arrival {job.arrival}, "
+                            f"turnaround_time: {job.statistics.turnaround}, "
+                            f"wait: {job.statistics.wait}, "
+                            f"response {job.statistics.response_time}",
+                            (5, 10 + 25 * (number_of_queues + i)), text_location=sg.TEXT_LOCATION_TOP_LEFT)
             avg_response += job.statistics.response_time
             avg_turnaround_time += job.statistics.turnaround
             avg_wait += job.statistics.wait
 
         total_jobs = len(self.job_list)
-        print("\nGlobal Statistics")
-        print(f"average turnaround_time: {avg_turnaround_time / total_jobs}\n"
-              f"average waiting_time: {avg_wait / total_jobs}\n"
-              f"average response_time: {avg_response / total_jobs}\n"
-              f"throughput: {total_jobs / self.current_time * 1000}")
+        graph.draw_text(f"Global Statistics\n"
+                        f"average turnaround_time: {avg_turnaround_time / total_jobs}\n"
+                        f"average waiting_time: {avg_wait / total_jobs}\n"
+                        f"average response_time: {avg_response / total_jobs}\n"
+                        f"throughput: {total_jobs / self.current_time * 1000}",
+                        (5, 10 + 25 * (number_of_queues + total_jobs)),
+                        text_location=sg.TEXT_LOCATION_TOP_LEFT)
 
 
 def parse_jobs(jobs):
@@ -105,9 +111,16 @@ def start_gui():
 
     # Create the Window
     window = sg.Window('MultiLevelFeedbackQueue', layout, finalize=True)
-    text1 = graph.draw_text('Queue 0 RR : 5', (5, 10), text_location=sg.TEXT_LOCATION_TOP_LEFT)
-    text2 = graph.draw_text('Queue 1 RR : 10', (5, 35), text_location=sg.TEXT_LOCATION_TOP_LEFT)
-    text3 = graph.draw_text('Queue 2 FCFS', (5, 60), text_location=sg.TEXT_LOCATION_TOP_LEFT)
+
+
+def draw_rr_queue_header(queue_id, quantum):
+    return graph.draw_text(f'Queue {queue_id} RR : {quantum}',
+                           (5, 10 + 25 * queue_id), text_location=sg.TEXT_LOCATION_TOP_LEFT)
+
+
+def draw_fcfs_queue_header(queue_id):
+    return graph.draw_text(f'Queue {queue_id} FCFS : 5', (5, 10 + 25 * queue_id),
+                           text_location=sg.TEXT_LOCATION_TOP_LEFT)
 
 
 x1 = 100
@@ -130,10 +143,10 @@ def draw_process_rect(queue_num, queue_ticks, process_id):
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
-    ap.add_argument("-n", "--numberOfQueues", default=3,
+    ap.add_argument("-n", "--numberOfQueues", default=4,
                     help="number of queues", type=int)
 
-    ap.add_argument("-q", "--quantumList", default="5,10",
+    ap.add_argument("-q", "--quantumList", default="5,7, 10",
                     help="q1,q2,q3, ...", type=str)
 
     ap.add_argument("-l", "--jobList", default="15:1,20:0,17:14,25:20",
