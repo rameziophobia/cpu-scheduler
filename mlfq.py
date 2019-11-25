@@ -63,11 +63,22 @@ class Mlfq:
             return queue
 
     def print_statistics(self):
+        avg_turnaround_time = avg_wait = avg_response = 0
         for job in self.job_list:
-            print(f"job arrival {job.arrival}, turn: {job.statistics.turnaround}, wait: {job.statistics.wait}, "
+            print(f"job arrival {job.arrival}, "
+                  f"turnaround_time: {job.statistics.turnaround}, "
+                  f"wait: {job.statistics.wait}, "
                   f"response {job.statistics.response_time}")
+            avg_response += job.statistics.response_time
+            avg_turnaround_time += job.statistics.turnaround
+            avg_wait += job.statistics.wait
 
-        print(f"throughput: {len(self.job_list) / self.current_time * 1000}")
+        total_jobs = len(self.job_list)
+        print("\nGlobal Statistics")
+        print(f"average turnaround_time: {avg_turnaround_time / total_jobs}\n"
+              f"average waiting_time: {avg_wait / total_jobs}\n"
+              f"average response_time: {avg_response / total_jobs}\n"
+              f"throughput: {total_jobs / self.current_time * 1000}")
 
 
 def parse_jobs(jobs):
