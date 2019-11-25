@@ -2,6 +2,8 @@ import argparse
 from scheduling_queue import RRQueue
 from scheduling_queue import FCFSQueue
 from process import Process
+import PySimpleGUI as sg
+import random
 
 
 class Mlfq:
@@ -15,8 +17,10 @@ class Mlfq:
     def init_queues(self, number_of_queues, quantum_list):
         for i in range(number_of_queues - 1):
             self.queues.append(RRQueue(i, quantum_list[i]))
+            draw_rr_queue_header(i, quantum_list[i])
 
         self.queues.append(FCFSQueue(number_of_queues - 1))
+        draw_fcfs_queue_header(number_of_queues - 1)
 
         for i in range(number_of_queues - 1):
             self.queues[i].set_next_queue(self.queues[i + 1])
@@ -39,7 +43,8 @@ class Mlfq:
 
             highest_queue = self.get_highest_non_empty_queue()
             if highest_queue is not None:
-                highest_queue.run_process(self.current_time)
+                process_id = highest_queue.run_process(self.current_time)
+                draw_process_rect(highest_queue.queue_id, self.current_time, process_id)
 
             self.current_time += 1
 
@@ -64,21 +69,24 @@ class Mlfq:
 
     def print_statistics(self):
         avg_turnaround_time = avg_wait = avg_response = 0
-        for job in self.job_list:
-            print(f"job arrival {job.arrival}, "
-                  f"turnaround_time: {job.statistics.turnaround}, "
-                  f"wait: {job.statistics.wait}, "
-                  f"response {job.statistics.response_time}")
+        for i, job in enumerate(self.job_list):
+            graph.draw_text(f"job arrival {job.arrival}, "
+                            f"turnaround_time: {job.statistics.turnaround}, "
+                            f"wait: {job.statistics.wait}, "
+                            f"response {job.statistics.response_time}",
+                            (5, 10 + 25 * (number_of_queues + i)), text_location=sg.TEXT_LOCATION_TOP_LEFT)
             avg_response += job.statistics.response_time
             avg_turnaround_time += job.statistics.turnaround
             avg_wait += job.statistics.wait
 
         total_jobs = len(self.job_list)
-        print("\nGlobal Statistics")
-        print(f"average turnaround_time: {avg_turnaround_time / total_jobs}\n"
-              f"average waiting_time: {avg_wait / total_jobs}\n"
-              f"average response_time: {avg_response / total_jobs}\n"
-              f"throughput: {total_jobs / self.current_time * 1000}")
+        graph.draw_text(f"Global Statistics\n"
+                        f"average turnaround_time: {avg_turnaround_time / total_jobs}\n"
+                        f"average waiting_time: {avg_wait / total_jobs}\n"
+                        f"average response_time: {avg_response / total_jobs}\n"
+                        f"throughput: {total_jobs / self.current_time * 1000}",
+                        (5, 10 + 25 * (number_of_queues + total_jobs)),
+                        text_location=sg.TEXT_LOCATION_TOP_LEFT)
 
 
 def parse_jobs(jobs):
@@ -90,16 +98,50 @@ def parse_jobs(jobs):
     return returned_jobs
 
 
-if __name__ == '__main__':
+def start_gui():
+    global graph, window
+    graph = sg.Graph(canvas_size=(1000, 300), graph_bottom_left=(0, 300), graph_top_right=(1000, 0), key='graph')
 
+    layout = [[graph],
+              [sg.Button('Exit')]]
+
+    # Create the Window
+    window = sg.Window('MultiLevelFeedbackQueue', layout, finalize=True)
+
+
+def draw_rr_queue_header(queue_id, quantum):
+    return graph.draw_text(f'Queue {queue_id} RR : {quantum}',
+                           (5, 10 + 25 * queue_id), text_location=sg.TEXT_LOCATION_TOP_LEFT)
+
+
+def draw_fcfs_queue_header(queue_id):
+    return graph.draw_text(f'Queue {queue_id} FCFS : 5', (5, 10 + 25 * queue_id),
+                           text_location=sg.TEXT_LOCATION_TOP_LEFT)
+
+
+x1 = 100
+x2_off = 10
+y1 = 10
+y2_off = 15
+COLORS = ["purple", "lightblue", "red", "green", "blue", "brown", "red", "black"]
+
+
+def draw_process_rect(queue_num, queue_ticks, process_id):
+    color = COLORS[process_id % len(COLORS)]
+    y1_d = y1 + 25 * queue_num
+    x1_d = x1 + queue_ticks * x2_off
+    graph.draw_rectangle((x1_d, y1_d), (x1_d + x2_off, y1_d + y2_off), fill_color=color)
+
+
+if __name__ == '__main__':
     ap = argparse.ArgumentParser()
-    ap.add_argument("-n", "--numberOfQueues", default=3,
+    ap.add_argument("-n", "--numberOfQueues", default=4,
                     help="number of queues", type=int)
 
-    ap.add_argument("-q", "--quantumList", default="5,10",
+    ap.add_argument("-q", "--quantumList", default="5,7, 10",
                     help="q1,q2,q3, ...", type=str)
 
-    ap.add_argument("-l", "--jobList", default="15:1,20:0",
+    ap.add_argument("-l", "--jobList", default="15:1,20:0,17:14,25:20",
                     help="burst1:arrivalTime1,burst2:arrivalTime2, ...")
 
     ap.add_argument("-b", "--boost", default=0,
@@ -113,9 +155,13 @@ if __name__ == '__main__':
     quantum_list = str(args["quantumList"]).split(",")
     quantum_list = [int(quantum) for quantum in quantum_list]
 
+    start_gui()
     processes = parse_jobs(jobs)
     mlfq = Mlfq(number_of_queues, quantum_list, processes, boost)
     mlfq.loop()
     mlfq.print_statistics()
-
-
+    while True:
+        event, values = window.read()
+        if event in (None, 'Exit'):  # if user closes window or clicks cancel
+            break
+    window.close()

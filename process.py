@@ -2,6 +2,8 @@ from statistics import Statistics
 
 
 class Process:
+    job_id_counter = 0
+
     def __init__(self, burst_time, arrival_time):
         self.arrival = arrival_time
         self.burst_time = burst_time
@@ -9,6 +11,8 @@ class Process:
         self.statistics = Statistics()
         self.finish_time = -1
         self.current_run = 0
+        self.process_id = Process.job_id_counter
+        Process.job_id_counter += 1
 
     def is_finished(self):
         return True if self.finish_time != -1 else False
@@ -30,3 +34,4 @@ class Process:
             self.statistics.response_time = current_time
 
         self.current_run += 1
+        return self.process_id
