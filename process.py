@@ -31,7 +31,7 @@ class Process:
             self.finish(current_time)
 
         if self.statistics.response_time == -1:
-            self.statistics.response_time = current_time
+            self.statistics.response_time = current_time - self.arrival
 
         self.current_run += 1
         return self.process_id

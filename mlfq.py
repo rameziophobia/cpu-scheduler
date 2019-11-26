@@ -71,6 +71,7 @@ class Mlfq:
         avg_turnaround_time = avg_wait = avg_response = 0
         for i, job in enumerate(self.job_list):
             graph.draw_text(f"job arrival {job.arrival}, "
+                            f"burst_time {job.burst_time}, "
                             f"turnaround_time: {job.statistics.turnaround}, "
                             f"wait: {job.statistics.wait}, "
                             f"response {job.statistics.response_time}",
@@ -100,7 +101,7 @@ def parse_jobs(jobs):
 
 def start_gui():
     global graph, window
-    graph = sg.Graph(canvas_size=(1000, 300), graph_bottom_left=(0, 300), graph_top_right=(1000, 0), key='graph')
+    graph = sg.Graph(canvas_size=(1000, 500), graph_bottom_left=(0, 500), graph_top_right=(1000, 0), key='graph')
 
     layout = [[graph],
               [sg.Button('Exit')]]
@@ -115,15 +116,15 @@ def draw_rr_queue_header(queue_id, quantum):
 
 
 def draw_fcfs_queue_header(queue_id):
-    return graph.draw_text(f'Queue {queue_id} FCFS : 5', (5, 10 + 25 * queue_id),
+    return graph.draw_text(f'Queue {queue_id} FCFS', (5, 10 + 25 * queue_id),
                            text_location=sg.TEXT_LOCATION_TOP_LEFT)
 
 
 x1 = 100
-x2_off = 10
+x2_off = 5
 y1 = 10
 y2_off = 15
-COLORS = ["purple", "lightblue", "red", "green", "blue", "brown", "red", "black"]
+COLORS = ["purple", "lightblue", "red", "green", "blue", "brown", "grey", "pink", "black", "yellow"]
 
 
 def draw_process_rect(queue_num, queue_ticks, process_id):
@@ -133,27 +134,26 @@ def draw_process_rect(queue_num, queue_ticks, process_id):
     graph.draw_rectangle((x1_d, y1_d), (x1_d + x2_off, y1_d + y2_off), fill_color=color)
 
 
-if __name__ == '__main__':
+def parse_arguments():
     ap = argparse.ArgumentParser()
-    ap.add_argument("-n", "--numberOfQueues", default=4,
-                    help="number of queues", type=int)
-
-    ap.add_argument("-q", "--quantumList", default="5,7, 10",
+    ap.add_argument("-q", "--quantumList", default="2, 4, 7",
                     help="q1,q2,q3, ...", type=str)
-
-    ap.add_argument("-l", "--jobList", default="15:1,20:0,17:14,25:20",
+    ap.add_argument("-l", "--jobList", default="19:0, 12:5, 13:50, 15:15, 17:15",
                     help="burst1:arrivalTime1,burst2:arrivalTime2, ...")
-
-    ap.add_argument("-b", "--boost", default=0,
+    ap.add_argument("-b", "--boost", default=71,
                     help="", type=int)
+    return ap
 
-    args = vars(ap.parse_args())
 
+if __name__ == '__main__':
+    arg_parser = parse_arguments()
+
+    args = vars(arg_parser.parse_args())
     boost = args["boost"]
-    number_of_queues = args["numberOfQueues"]
     jobs = str(args["jobList"]).split(",")
     quantum_list = str(args["quantumList"]).split(",")
     quantum_list = [int(quantum) for quantum in quantum_list]
+    number_of_queues = len(quantum_list) + 1
 
     start_gui()
     processes = parse_jobs(jobs)

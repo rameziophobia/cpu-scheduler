@@ -5,7 +5,7 @@ class Statistics:
         self.wait = 0
 
     def calculate_wait(self, final, arrival, burst):
-        self.wait = final - arrival - burst
+        self.wait = final - arrival - burst + 1
 
     def calculate_turnaround(self, final, arrival):
         self.turnaround = final - arrival
