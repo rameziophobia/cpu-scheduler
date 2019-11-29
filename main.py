@@ -5,7 +5,6 @@ from process import Process
 
 
 def main():
-    global mlfq
     arg_parser = parse_arguments()
     args = vars(arg_parser.parse_args())
     boost = args["boost"]
@@ -29,7 +28,7 @@ def parse_arguments():
     ap = argparse.ArgumentParser()
     ap.add_argument("-q", "--quantumList", default="8, 16",
                     help="q1,q2,q3, ...", type=str)
-    ap.add_argument("-l", "--jobList", default="19:0, 22:5, 13:50, 34:15, 17:15, 23:50, 15:15, 19:15",
+    ap.add_argument("-l", "--jobList", default="32:0, 16:16, 26:42",
                     help="burst1:arrivalTime1,burst2:arrivalTime2, ...")
     ap.add_argument("-b", "--boost", default=0,
                     help="", type=int)

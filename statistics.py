@@ -8,5 +8,5 @@ class Statistics:
         self.wait = final - arrival - burst + 1
 
     def calculate_turnaround(self, final, arrival):
-        self.turnaround = final - arrival
+        self.turnaround = final - arrival + 1
 
